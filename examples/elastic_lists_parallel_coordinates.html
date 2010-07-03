@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <title>Protovis Elastic Lists</title>
+    <script src="../js/protovis-d3.2.js" type="text/javascript" charset="utf-8"></script>    
+    <script src="../js/cars.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../js/elastic_lists.js" type="text/javascript" charset="utf-8"></script>    
+  </head>
+  <body> 
+    <div id="elastic_lists">
+    </div>
+    
+    <div id="visualization">
+    </div>  
+    
+    <script type="text/javascript">
+    
+  // define columns for elastic lists (1 list per column)
+  var cols = [
+    {name: "cylinders", step: 1, type: "N"},
+    {name: "year", step: 1},
+    {name: "acceleration", step: 1},
+    {name: "weight", step: 500},
+    {name: "mpg", step: 1},
+    {name: "name", type: "T"}
+  ]; 
+                        
+  var data = cars;  
+
+  /* The dimensions to visualize, in order. */
+  var dims = [
+    "cylinders",
+    "displacement",
+    "weight",
+    "horsepower",
+    "acceleration",
+    "mpg",
+    "year",
+    "origin"
+  ];
+
+  /* Sizing and scales. */
+  var w = 840;
+  var h = 420;
+  var color = pv.Colors.category10();
+  var x = pv.Scale.ordinal(dims).splitFlush(0, w);
+              
+  /* The root panel. */
+  var vis = new pv.Panel()
+      .width(w)
+      .height(h)
+      .margin(20)
+      .bottom(40)
+      .canvas("visualization"); 
+      
+  var list = new Lists(cols, data, 350, 150, 20, 1, "elastic_lists", vis);   
+                               
+  /* Rule and labels per dimension. */
+  var rule = vis.add(pv.Rule)
+      .data(dims)
+      .left(x)
+      .strokeStyle(color.by(pv.index))
+      .lineWidth(2);
+
+  rule.anchor("top").add(pv.Label)
+      .text(function(t) { return y[t].domain()[0] });
+
+  rule.anchor("bottom").add(pv.Label)
+      .text(function(t) { return y[t].domain()[1] });
+
+  rule.anchor("bottom").add(pv.Label)
+      .textStyle(function() { return color(this.index).darker() })
+      .textMargin(14); 
+                                 
+  var y = pv.dict(dims, function(t) { return pv.Scale.linear()
+    .domain(list.data().filter(function(d) { return !isNaN(d[t]) }), function(d) { return d[t] })
+    .range(0, h) });
+
+  /* Parallel coordinates. */
+  vis.add(pv.Panel)
+      .data(list.data)
+    .add(pv.Line)
+      .data(dims)
+      .left(function(t, d) { return x(t) })
+      .bottom(function(t, d) { return y[t](d[t]) })
+      .strokeStyle("rgba(0, 0, 0, .2)")
+      .lineWidth(1);
+      
+  vis.render();
+
+    </script> 
+  </body>
+</html>
