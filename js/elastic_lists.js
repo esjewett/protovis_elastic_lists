@@ -162,6 +162,10 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback_vis) {
                   
               bin.y = bin.length;
             });
+            
+            bs.sort(function(a,b) {
+              return b.y - a.y;
+            });  
     
             e["stale"] = false; 
           }  
@@ -179,7 +183,11 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback_vis) {
           if(e["stale"]) {
             bs = pv.histogram(filtered_data(), function(d) { 
               return d[e["name"]] })
-              .bins(bin_vals[i]).sort().reverse();
+              .bins(bin_vals[i])
+              
+            bs.sort(function(a,b) {
+              return b.y - a.y;
+            });
 
             e["stale"] = false;
           }
