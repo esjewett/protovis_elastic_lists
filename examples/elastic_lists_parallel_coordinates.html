@@ -17,7 +17,7 @@
     <script type="text/javascript">
     
   // define columns for elastic lists (1 list per column)
-  var cols = [
+  var facets = [
     {name: "cylinders", step: 1, type: "N"},
     {name: "year", step: 1},
     {name: "acceleration", step: 1},
@@ -54,7 +54,7 @@
       .bottom(40)
       .canvas("visualization"); 
       
-  var list = new Lists(cols, data, 350, 150, 20, 1, "elastic_lists", function() { vis.render(); });   
+  var list = new Lists(facets, data, 350, 150, 20, 1, "elastic_lists", function() { vis.render(); });   
                                
   /* Rule and labels per dimension. */
   var rule = vis.add(pv.Rule)
@@ -64,10 +64,10 @@
       .lineWidth(2);
 
   rule.anchor("top").add(pv.Label)
-      .text(function(t) { return y[t].domain()[0] });
+      .text(function(t) { return y[t].domain()[1] });
 
   rule.anchor("bottom").add(pv.Label)
-      .text(function(t) { return y[t].domain()[1] });
+      .text(function(t) { return y[t].domain()[0] });
 
   rule.anchor("bottom").add(pv.Label)
       .textStyle(function() { return color(this.index).darker() })

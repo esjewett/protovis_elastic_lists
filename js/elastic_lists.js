@@ -1,6 +1,6 @@
 // Add duplicate removal to the array prototype - stolen from some blog
 
-if (!Array.prototype.remove_dups) Array.prototype.remove_dups = function(f, o) {
+if (!Array.prototype.remove_dups) Array.prototype.remove_dups = function() {
   var result = [];
 
   label:for(var i=0; i<this.length;i++ ) {  
@@ -15,7 +15,7 @@ if (!Array.prototype.remove_dups) Array.prototype.remove_dups = function(f, o) {
   return result;
 }                          
 
-var Lists = function(cols, data, h, w, f, spacing, canvas, callback) { 
+var Lists = function(facets, data, h, w, f, spacing, canvas, callback) { 
         
   var cached_data = data,  
       data_stale = true,  
@@ -61,7 +61,7 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
       cached_data = data.filter(function(e,i) {
         return relevant_columns.reduce(function(a,b,j) {
           if(b === true) {                                                                   
-            return a && col_selections[j][(e[cols[j]["name"]])];
+            return a && col_selections[j][(e[facets[j]["name"]])];
           } else {
             return a && true;
           }
@@ -77,7 +77,7 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
   }  
 
   // build arrays of all values for each column, sorted      
-  cols.forEach(function(e,i){
+  facets.forEach(function(e,i){
      
     var temp_col = [];
     col_vals[i] = [];     
@@ -93,9 +93,9 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
     // Remove duplicates from column values.
     col_vals[i] = temp_col.remove_dups();  
     
-    // If not already defined in the cols["type"] key, figure out to the best of our
+    // If not already defined in the facets["type"] key, figure out to the best of our
     // ability if the column is text or numeric. User can over-ride by defining this
-    // key in the cols data structure.
+    // key in the facets data structure.
     
     if(!e["type"]) {
       if(char_test.test(col_vals[i].join())) {
@@ -117,91 +117,73 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
 
   // build arrays of values to use as bins, based on column value arrays
   col_vals.forEach(function(e,i){ 
-    if(cols[i]["type"] == "T") {
+    if(facets[i]["type"] == "T") {
       bin_vals[i] = e;         
     } else {
-      bin_vals[i] = pv.range(Math.round((col_vals[i].shift() - cols[i]["step"]) / cols[i]["step"]) * cols[i]["step"],
-        Math.round((col_vals[i].pop() + cols[i]["step"]) / cols[i]["step"]) * cols[i]["step"],
-        cols[i]["step"]); 
+      bin_vals[i] = pv.range(Math.round((col_vals[i].shift() - facets[i]["step"]) / facets[i]["step"]) * facets[i]["step"],
+        Math.round((col_vals[i].pop() + facets[i]["step"]) / facets[i]["step"]) * facets[i]["step"],
+        facets[i]["step"]); 
     }
   });   
 
   // Build histogram bins                        
   // Note: All the function junk in there is to memoize/cache based
-  // on cols[i]["stale"] being true/false  
+  // on facets[i]["stale"] being true/false  
 
-  cols.forEach(function(e,i){ 
+  facets.forEach(function(e,i){ 
  
     e["stale"] = true;  
-
-    if(e["type"] == "T") {
 
       // We redo the protovis histogram bin implementation to handle text-based values
       // with the same API as bins (minus .dx). 
                             
-      bins.push((function () {   
-        var bs = [];
+    bins.push((function () {   
+      var bs = [];
 
-        var bin_func = function(){
+      var bin_func = function(){
+        if(e["stale"]) {
   
-          if(e["stale"]) {
-    
-            bs = [];
+          bs = [];     
+          
+          if(e["type"] == "T") {     
 
             // Initialize bins                       
             col_vals[i].forEach(function(a,j) {
               var bin = bs[j] = [];
               bin.x = a;
               bin.dx = 1; 
-    
+  
               filtered_data().filter(function(b) {
-                return b[cols[i]["name"]] == a;
+                return b[facets[i]["name"]] == a;
               }).forEach(function(b) {
                 bin.push(b);
               });        
-                  
+                
               bin.y = bin.length;
-            });
-            
-            bs.sort(function(a,b) {
-              return b.y - a.y;
-            });  
-    
-            e["stale"] = false; 
-          }  
-
-          return bs;
-        }; 
-
-        return bin_func;
-      }()));
-    } else {
-      bins.push((function () {   
-        var bs = [];
-
-        var bin_func = function() {
-          if(e["stale"]) {
+            });   
+          
+          } else {  
             bs = pv.histogram(filtered_data(), function(d) { 
               return d[e["name"]] })
-              .bins(bin_vals[i])
-              
-            bs.sort(function(a,b) {
-              return b.y - a.y;
-            });
+              .bins(bin_vals[i]) 
+          }  
+          
+          bs.sort(function(a,b) {
+            return b.y - a.y;
+          });  
+  
+          e["stale"] = false; 
+        }  
 
-            e["stale"] = false;
-          }
+        return bs;
+      }; 
 
-          return bs;
-        }; 
-
-        return bin_func;
-      }()));
-    }  
+      return bin_func;
+    }()));                         
   });
 
   // build static cache of bin values for full data set
-  cols.forEach(function(e,i) {
+  facets.forEach(function(e,i) {
     orig_bins[i] = {};
 
     bins[i]().forEach(function(f) {
@@ -246,7 +228,7 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
     .top(-15)     
     .font("bold 11px sans-serif")
     .text(function() {
-      var full_label = cols[this.parent.index]["name"].toLowerCase();
+      var full_label = facets[this.parent.index]["name"].toLowerCase();
       return full_label.substring(0,1).toUpperCase().concat(full_label.substring(1));
     });          
 
@@ -274,7 +256,7 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
              
       // Make sure we properly set a selection for each element in the bin.
       orig_bins[this.parent.parent.index][d.x].bins.forEach(function(b,i) { 
-        col_selections[this.parent.parent.index][b[cols[this.parent.parent.index]["name"]]] = 
+        col_selections[this.parent.parent.index][b[facets[this.parent.parent.index]["name"]]] = 
           !bin_selections[this.parent.parent.index][d.x];  
       }, this);               
 
@@ -284,7 +266,7 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
       this.active(false);
       data_stale = true;  
 
-      cols.forEach(function(c) {
+      facets.forEach(function(c) {
         c["stale"] = true;
       })                                                            
 
@@ -300,14 +282,14 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback) {
           
       var value = d.x;
 
-      if(cols[this.parent.parent.index]["type"] == "N") {
+      if(facets[this.parent.parent.index]["type"] == "N") {
         value++;
       } 
 
       var range = "";
 
-      if(cols[this.parent.parent.index]["step"] > 1) {
-        range = " to " + (d.x + cols[this.parent.parent.index]["step"]);
+      if(facets[this.parent.parent.index]["step"] > 1) {
+        range = " to " + (d.x + facets[this.parent.parent.index]["step"]);
       }
 
       var t = value.toString() + range;
