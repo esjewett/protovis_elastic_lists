@@ -15,7 +15,7 @@ if (!Array.prototype.remove_dups) Array.prototype.remove_dups = function(f, o) {
   return result;
 }                          
 
-var Lists = function(cols, data, h, w, f, spacing, canvas, callback_vis) { 
+var Lists = function(cols, data, h, w, f, spacing, canvas, callback) { 
         
   var cached_data = data,  
       data_stale = true,  
@@ -288,10 +288,10 @@ var Lists = function(cols, data, h, w, f, spacing, canvas, callback_vis) {
         c["stale"] = true;
       })                                                            
 
-      list.render();  
+      list.render();   
   
-      if(callback_vis) {
-        callback_vis.render();
+      if(callback) {
+        callback();
       };         
     });                                     
 
