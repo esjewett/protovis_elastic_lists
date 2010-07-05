@@ -15,7 +15,8 @@ if (!Array.prototype.remove_dups) Array.prototype.remove_dups = function() {
   return result;
 }                          
 
-var Lists = function(facets, data, h, w, f, spacing, canvas, callback) { 
+var Lists = function(facets, data, h, w, f, spacing, canvas, callback) {
+  pv.Layout.call(this); 
         
   var cached_data = data,  
       data_stale = true,  
@@ -208,100 +209,112 @@ var Lists = function(facets, data, h, w, f, spacing, canvas, callback) {
     y.push(function() {
       return pv.Scale.linear(0,e()).range(0,h);
     })   
-  });
+  });          
+                
+  this.render = function() {
+    
+    var outside_panel = new pv.Panel()
+      .width((w + 10) * y.length + 10).height(h + 30).fillStyle("lightgrey")
+      .canvas(canvas);                    
 
-  var outside_panel = new pv.Panel()
-    .width((w + 10) * y.length + 10).height(h + 30).fillStyle("lightgrey")
-    .canvas(canvas);                    
+    var list = outside_panel.add(pv.Panel)
+      .data(bins) 
+      .top(20)
+      .left(function() {
+        return 10 + ((w + 10) * this.index );
+      })
+      .width(w).height(h).fillStyle("lightgrey");
 
-  var list = outside_panel.add(pv.Panel)
-    .data(bins) 
-    .top(20)
-    .left(function() {
-      return 10 + ((w + 10) * this.index );
-    })
-    .width(w).height(h).fillStyle("lightgrey");
+    // Column name labels
 
-  // Column name labels
+    list.anchor("top").add(pv.Label)
+      .top(-15)     
+      .font("bold 11px sans-serif")
+      .text(function() {
+        var full_label = facets[this.parent.index]["name"].toLowerCase();
+        return full_label.substring(0,1).toUpperCase().concat(full_label.substring(1));
+      });          
 
-  list.anchor("top").add(pv.Label)
-    .top(-15)     
-    .font("bold 11px sans-serif")
-    .text(function() {
-      var full_label = facets[this.parent.index]["name"].toLowerCase();
-      return full_label.substring(0,1).toUpperCase().concat(full_label.substring(1));
-    });          
+    var panel = list.add(pv.Panel)  
+      .data(function(d){       
+        return d();
+      })                         
+      .top(function() {              
+        var sliced = bins[this.parent.index]().slice(0,this.index);
+        var r = sliced.reduce(total_height, 0);
+        return y[this.parent.index]()(r);
+      })     
+      .height(function(d) { 
+        return y[this.parent.index]()(floory(d.y)) })
+      .visible(function(d) { return !(d.y == 0);})
 
-  var panel = list.add(pv.Panel)  
-    .data(function(d){       
-      return d();
-    })                         
-    .top(function() {              
-      var sliced = bins[this.parent.index]().slice(0,this.index);
-      var r = sliced.reduce(total_height, 0);
-      return y[this.parent.index]()(r);
-    })     
-    .height(function(d) { 
-      return y[this.parent.index]()(floory(d.y)) })
-    .visible(function(d) { return !(d.y == 0);})
+    var section = panel.add(pv.Bar)           
+      .def("active", false)     
+      .fillStyle(function(d) {
+        return this.active() ? "orange" : bin_selections[this.parent.parent.index][d.x] ? "grey" : "steelblue"
+      })
+      .event("mouseover", function() { this.active(true); this.render() })
+      .event("mouseout", function() { this.active(false); this.render() })
+      .event("click", function(d) {                          
 
-  var section = panel.add(pv.Bar)           
-    .def("active", false)     
-    .fillStyle(function(d) {
-      return this.active() ? "orange" : bin_selections[this.parent.parent.index][d.x] ? "grey" : "steelblue"
-    })
-    .event("mouseover", function() { this.active(true); this.render() })
-    .event("mouseout", function() { this.active(false); this.render() })
-    .event("click", function(d) {                          
-             
-      // Make sure we properly set a selection for each element in the bin.
-      orig_bins[this.parent.parent.index][d.x].bins.forEach(function(b,i) { 
-        col_selections[this.parent.parent.index][b[facets[this.parent.parent.index]["name"]]] = 
-          !bin_selections[this.parent.parent.index][d.x];  
-      }, this);               
+        // Make sure we properly set a selection for each element in the bin.
+        orig_bins[this.parent.parent.index][d.x].bins.forEach(function(b,i) { 
+          col_selections[this.parent.parent.index][b[facets[this.parent.parent.index]["name"]]] = 
+            !bin_selections[this.parent.parent.index][d.x];  
+        }, this);               
 
-      // Make sure we have a selection that exactly matches the bin.          
-      bin_selections[this.parent.parent.index][d.x] = !bin_selections[this.parent.parent.index][d.x];   
-                                                         
-      this.active(false);
-      data_stale = true;  
+        // Make sure we have a selection that exactly matches the bin.          
+        bin_selections[this.parent.parent.index][d.x] = !bin_selections[this.parent.parent.index][d.x];   
 
-      facets.forEach(function(c) {
-        c["stale"] = true;
-      })                                                            
+        this.active(false);
+        data_stale = true;  
 
-      list.render();   
-  
-      if(callback) {
-        callback();
-      };         
-    });                                     
+        facets.forEach(function(c) {
+          c["stale"] = true;
+        })                                                            
 
-  section.anchor("left").add(pv.Label)
-    .text(function(d) {
-          
-      var value = d.x;
+        list.render();   
 
-      if(facets[this.parent.parent.index]["type"] == "N") {
-        value++;
-      } 
+        if(callback) {
+          callback();
+        };         
+      });                                     
 
-      var range = "";
+    section.anchor("left").add(pv.Label)
+      .text(function(d) {
 
-      if(facets[this.parent.parent.index]["step"] > 1) {
-        range = " to " + (d.x + facets[this.parent.parent.index]["step"]);
-      }
+        var value = d.x;
 
-      var t = value.toString() + range;
-      if( d.y > 0 ) { 
-        return t; 
-      }
-    }); 
+        if(facets[this.parent.parent.index]["type"] == "N") {
+          value++;
+        } 
 
-  section.anchor("right").add(pv.Label)
-    .text(function(d) {                                
-      return d.y + "/" + orig_bins[this.parent.parent.index][d.x].y;
-    });                                                                        
+        var range = "";
 
-  list.render();           
-};
+        if(facets[this.parent.parent.index]["step"] > 1) {
+          range = " to " + (d.x + facets[this.parent.parent.index]["step"]);
+        }
+
+        var t = value.toString() + range;
+        if( d.y > 0 ) { 
+          return t; 
+        }
+      }); 
+
+    section.anchor("right").add(pv.Label)
+      .text(function(d) {                                
+        return d.y + "/" + orig_bins[this.parent.parent.index][d.x].y;
+      });
+    
+    outside_panel.render();   
+  }                            
+};   
+
+Lists.prototype = pv.extend(pv.Layout)
+    .property("facets", Array)
+    .property("height", Number)
+    .property("weight", Number)
+    .property("floor", Number)
+    .property("spacing", Number)
+    .property("canvas", String)
+    .property("callback", Function);            

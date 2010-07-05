@@ -54,7 +54,10 @@
       .bottom(40)
       .canvas("visualization"); 
       
-  var list = new Lists(facets, data, 350, 150, 20, 1, "elastic_lists", function() { vis.render(); });   
+  var list = new Lists(facets, data, 350, 150, 20, 1, "elastic_lists", function() { vis.render(); }); 
+  list.canvas("elastic_lists").render();
+  
+//  list.facets(facets);   
                                
   /* Rule and labels per dimension. */
   var rule = vis.add(pv.Rule)
