@@ -42,7 +42,7 @@
 
   /* Sizing and scales. */
   var w = 840;
-  var h = 420;
+  var h = 220;
   var color = pv.Colors.category10();
   var x = pv.Scale.ordinal(dims).splitFlush(0, w);
               
@@ -55,7 +55,7 @@
       .canvas("visualization"); 
       
   var list = new Lists(facets, data, 350, 150, 20, 1, "elastic_lists", function() { vis.render(); }); 
-  list.canvas("elastic_lists").render();
+  list.canvas("elastic_lists").reset().render();
   
 //  list.facets(facets);   
                                
